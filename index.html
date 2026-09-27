@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Dashboard - Wisnu</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { 
+                extend: { 
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } 
+                } 
+            }
+        }
+    </script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <style>
+        body { 
+            background-color: #F8FAFC; 
+            transition: background-color 0.3s; 
+        }
+        .dark body { 
+            background-color: #0F172A; 
+        }
+        .hide-scroll::-webkit-scrollbar { 
+            display: none; 
+        }
+        .gradient-text { 
+            background: linear-gradient(to right, #2DD4BF, #3B82F6); 
+            -webkit-background-clip: text; 
+            color: transparent; 
+        }
+        .card-hover { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .card-hover:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1); 
+        }
+        
+        .switch-active { 
+            background-color: white; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); 
+            color: #0f172a; 
+        }
+        .dark .switch-active { 
+            background-color: #334155; 
+            color: white; 
+        }
+        .switch-inactive { 
+            color: #64748b; 
+        }
+        .switch-inactive:hover { 
+            color: #0f172a; 
+        }
+        .dark .switch-inactive:hover { 
+            color: white; 
+        }
+
+        /* Custom Heatmap Colors */
+        .heat-0 { background-color: #f1f5f9; } 
+        .dark .heat-0 { background-color: #1e293b; }
+        
+        .heat-1 { background-color: #99f6e4; } 
+        .dark .heat-1 { background-color: #115e59; }
+        
+        .heat-2 { background-color: #fecdd3; } 
+        .dark .heat-2 { background-color: #9f1239; }
+        
+        .heat-3 { background-color: #f43f5e; } 
+        .dark .heat-3 { background-color: #e11d48; }
+
+        /* Loading Spinner */
+        .loader { 
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #14b8a6; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 1s linear infinite; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+    </style>
+</head>
+<body class="text-slate-800 dark:text-slate-200 antialiased h-screen flex overflow-hidden selection:bg-teal-200 selection:text-teal-900">
+
+    <!-- ================= LOGIN & LOADING SCREEN OVERLAY ================= -->
+    <div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-50 dark:bg-slate-900 transition-all duration-500">
+        <div class="absolute -top-20 -left-20 w-72 h-72 bg-teal-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
+        <div class="absolute -bottom-20 -right-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-700"></div>
+        
+        <div id="login-box" class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl p-8 sm:p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-slate-100 dark:border-slate-700 relative z-10 mx-4 transition-all duration-500">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 rounded-2xl bg-teal-50 dark:bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400 mx-auto mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                </div>
+                <h1 class="text-3xl font-extrabold tracking-tight dark:text-white">Wisnu<span class="gradient-text">Finance</span>.</h1>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Sistem Keuangan Pribadi</p>
+            </div>
+            
+            <form id="login-form" onsubmit="event.preventDefault(); handleLogin(); return false;" class="space-y-5">
+                <div>
+                    <input type="text" id="login-username" class="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-5 py-3.5 focus:ring-2 focus:ring-teal-500 outline-none text-slate-800 dark:text-white font-bold" required placeholder="Username">
+                </div>
+                <div>
+                    <input type="password" id="login-password" class="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-5 py-3.5 focus:ring-2 focus:ring-teal-500 outline-none text-slate-800 dark:text-white font-bold tracking-widest" required placeholder="••••••••">
+                </div>
+                <div id="login-error" class="hidden flex items-center gap-2 text-rose-500 bg-rose-50 dark:bg-rose-500/10 p-3 rounded-xl border border-rose-100 dark:border-rose-900/30">
+                    <p class="text-sm font-bold">Akses Ditolak! Kredensial salah.</p>
+                </div>
+                <button type="submit" class="w-full bg-slate-900 dark:bg-teal-500 hover:bg-slate-800 dark:hover:bg-teal-400 text-white font-bold py-4 rounded-xl mt-6 transition-all duration-300 shadow-lg transform hover:-translate-y-1">Buka Dashboard</button>
+            </form>
+
+            <div id="loading-ui" class="hidden flex-col items-center justify-center py-6">
+                <div class="loader mb-4"></div>
+                <p class="text-slate-600 dark:text-slate-300 font-bold animate-pulse text-sm">Menarik data dari Spreadsheet...</p>
+            </div>
+        </div>
+    </div>
+    <!-- ======================================================== -->
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl flex flex-col hidden md:flex shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20 border-r border-slate-100 dark:border-slate-800 transition-colors">
+        <div class="p-8 pb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight dark:text-white">Wisnu<span class="gradient-text">Finance</span>.</h1>
+                <p class="text-slate-400 text-[11px] mt-1.5 font-bold tracking-widest uppercase">Personal Wealth</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 px-4 space-y-1.5 overflow-y-auto hide-scroll" id="sidebar-nav">
+            <!-- Di-generate otomatis oleh JavaScript -->
+        </nav>
+        
+        <div class="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+            <button onclick="openModal()" class="w-full bg-slate-900 dark:bg-teal-500 hover:bg-slate-800 dark:hover:bg-teal-400 text-white font-bold py-3.5 rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                </svg> 
+                Catat Transaksi
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full relative overflow-y-auto hide-scroll">
+        <!-- Header -->
+        <header class="px-6 sm:px-8 py-8 flex justify-between items-end gap-6 flex-wrap">
+            <div>
+                <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight" id="header-title">Overview Keseluruhan</h2>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium flex items-center gap-2">
+                    <span class="flex h-2.5 w-2.5 relative">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-500"></span>
+                    </span>
+                    <span id="current-date">Memuat Tanggal...</span>
+                </p>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button onclick="toggleDarkMode()" class="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-amber-400 hover:text-slate-900 transition-colors card-hover">
+                    <svg id="icon-sun" class="w-6 h-6 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <svg id="icon-moon" class="w-6 h-6 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+                
+                <button id="btn-refresh" onclick="refreshDataFromSheet()" class="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-teal-400 hover:text-teal-600 transition-colors card-hover" title="Sinkronkan Manual">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+                
+                <div class="flex items-center gap-4 bg-white dark:bg-slate-800 px-5 py-3 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 card-hover cursor-default">
+                    <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-teal-400 to-blue-500 flex items-center justify-center text-white font-bold text-lg shadow-inner ring-4 ring-slate-50 dark:ring-slate-700">W</div>
+                    <div class="hidden sm:block">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Welcome back</p>
+                        <p class="text-sm font-bold text-slate-800 dark:text-white">Thomas Wisnu</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="px-6 sm:px-8 space-y-6 pb-20">
+            <!-- Row 1: AI Insight -->
+            <div class="bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 rounded-[2rem] p-1 shadow-xl card-hover relative overflow-hidden">
+                <div class="bg-gradient-to-r from-slate-900 to-indigo-900 rounded-[30px] p-6 sm:p-8 relative overflow-hidden flex flex-col xl:flex-row items-start xl:items-center justify-between gap-8">
+                    <div class="absolute -right-10 -top-10 w-48 h-48 bg-teal-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+                    
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-6 relative z-10 flex-1">
+                        <div class="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 shrink-0 hidden sm:flex">
+                            <svg class="w-7 h-7 text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <h3 class="text-teal-400 font-bold text-xs tracking-widest uppercase">Smart AI Insight</h3>
+                                <span class="px-2 py-0.5 rounded-full bg-teal-400/20 text-teal-300 text-[10px] font-bold" id="ai-month-badge">Bulan Ini</span>
+                            </div>
+                            <p class="text-white text-[15px] sm:text-base font-medium leading-relaxed" id="ai-insight">Menganalisis data...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="relative z-10 bg-white/10 border border-white/20 backdrop-blur-md rounded-2xl p-5 w-full xl:w-auto min-w-[280px]">
+                        <p class="text-xs text-indigo-200 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg> 
+                            Proyeksi Akhir Tahun
+                        </p>
+                        <h4 class="text-2xl font-extrabold text-white" id="ai-forecast">Rp 0</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: 4 Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 card-hover">
+                    <p class="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">Total Saldo Aktif</p>
+                    <h3 class="text-2xl xl:text-3xl font-extrabold text-slate-900 dark:text-white truncate" id="card-balance">Rp 0</h3>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 card-hover">
+                    <p class="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">Pemasukan (YTD)</p>
+                    <h3 class="text-2xl xl:text-3xl font-extrabold text-teal-600 dark:text-teal-400 truncate" id="card-income">Rp 0</h3>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 card-hover">
+                    <p class="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">Pengeluaran (YTD)</p>
+                    <h3 class="text-2xl xl:text-3xl font-extrabold text-rose-600 dark:text-rose-400 truncate" id="card-expense">Rp 0</h3>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 card-hover">
+                    <p class="text-sm text-slate-500 dark:text-slate-400 font-semibold mb-1">Net Saving (YTD)</p>
+                    <h3 class="text-2xl xl:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 truncate" id="card-net">Rp 0</h3>
+                </div>
+            </div>
+
+            <!-- Row 3: Tracker Cards (Budget, Goal, Health Score) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 1. Global Budget -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 card-hover flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-900 dark:text-white">Budget Global</h3>
+                            <button onclick="openBudgetModal()" class="text-slate-400 hover:text-teal-500 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                            Limit: <strong id="budget-limit-display" class="text-slate-700 dark:text-slate-300">Rp 2.000.000</strong>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-3 mb-2 overflow-hidden">
+                            <div id="budget-bar" class="bg-teal-500 h-3 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs font-bold">
+                            <span id="budget-used" class="text-slate-600 dark:text-slate-400">Rp 0</span>
+                            <span id="budget-percentage" class="text-teal-500">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Goal Tracker -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 card-hover flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-900 dark:text-white" id="goal-name-display">Dana Darurat</h3>
+                            <button onclick="openGoalModal()" class="text-slate-400 hover:text-indigo-500 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                            Target: <strong id="goal-target-display" class="text-slate-700 dark:text-slate-300">Rp 5.000.000</strong>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-3 mb-2 overflow-hidden">
+                            <div id="goal-bar" class="bg-indigo-500 h-3 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs font-bold">
+                            <span id="goal-current" class="text-slate-600 dark:text-slate-400">Rp 0</span>
+                            <span id="goal-percentage" class="text-indigo-500">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Financial Health Score -->
+                <div class="bg-gradient-to-br from-teal-400 to-emerald-600 p-6 rounded-[2rem] shadow-md text-white card-hover flex items-center justify-between relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-white rounded-full mix-blend-overlay filter blur-2xl opacity-40"></div>
+                    <div>
+                        <h3 class="font-bold text-emerald-50 mb-1">Health Score</h3>
+                        <p class="text-xs text-emerald-100 opacity-90 font-medium">Rasio tabungan bulanan.</p>
+                        <div class="mt-3 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-xs font-bold inline-block" id="health-status">Sangat Sehat</div>
+                    </div>
+                    <div class="w-20 h-20 shrink-0 relative flex items-center justify-center">
+                        <svg class="w-full h-full transform -rotate-90">
+                            <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none"></circle>
+                            <circle id="health-circle" cx="40" cy="40" r="36" stroke="white" stroke-width="8" fill="none" stroke-dasharray="226" stroke-dashoffset="226" class="transition-all duration-1000 ease-out"></circle>
+                        </svg>
+                        <span class="absolute text-2xl font-extrabold" id="health-score-val">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 4: Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Main Flow Chart -->
+                <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-900 dark:text-white">Analisis Arus Kas</h3>
+                        </div>
+                        <div class="flex bg-slate-100/80 dark:bg-slate-900/50 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700">
+                            <button id="btn-chart-line" onclick="switchChartType('line')" class="switch-active px-4 py-1.5 rounded-lg text-xs font-bold transition-all">Line</button>
+                            <button id="btn-chart-bar" onclick="switchChartType('bar')" class="switch-inactive px-4 py-1.5 rounded-lg text-xs font-bold transition-all">Bar</button>
+                        </div>
+                    </div>
+                    <div class="relative h-[280px] w-full mt-auto">
+                        <canvas id="financeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Asset Allocation Donut -->
+                <div class="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 dark:text-white">Alokasi Saldo</h3>
+                    </div>
+                    <div class="relative h-[220px] w-full flex-1 mt-6 flex items-center justify-center">
+                        <canvas id="donutChart"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2" id="donut-center-text">
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">Total Aset</span>
+                            <span class="text-sm font-extrabold text-slate-800 dark:text-white" id="donut-center-val">Rp 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 5: Bento Widgets -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 1. Heatmap Kalender -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 card-hover">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white mb-1">Intensitas Pengeluaran</h3>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-4" id="heatmap-month-label">Bulan Ini</p>
+                    
+                    <div class="grid grid-cols-7 gap-1.5 sm:gap-2 mb-2 text-center text-[10px] font-bold text-slate-400">
+                        <div>M</div><div>S</div><div>S</div><div>R</div><div>K</div><div>J</div><div>S</div>
+                    </div>
+                    <div id="heatmap-grid" class="grid grid-cols-7 gap-1.5 sm:gap-2"></div>
+                    <div class="flex items-center justify-end gap-1.5 mt-4 text-[9px] font-bold text-slate-400">
+                        <span>Aman</span>
+                        <div class="w-2.5 h-2.5 rounded-sm heat-0"></div>
+                        <div class="w-2.5 h-2.5 rounded-sm heat-1"></div>
+                        <div class="w-2.5 h-2.5 rounded-sm heat-2"></div>
+                        <div class="w-2.5 h-2.5 rounded-sm heat-3"></div>
+                        <span>Boros</span>
+                    </div>
+                </div>
+
+                <!-- 2. Tagihan Rutin -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 card-hover flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white">Tagihan Mendatang</h3>
+                        <button onclick="openSubModal()" class="w-6 h-6 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors" title="Tambah Tagihan">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 space-y-3 overflow-y-auto hide-scroll" id="bills-list"></div>
+                </div>
+
+                <!-- 3. Hutang & Piutang -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 card-hover flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white">Hutang/Piutang</h3>
+                        <button onclick="openDebtModal()" class="w-6 h-6 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors" title="Tambah Catatan">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 space-y-3 overflow-y-auto hide-scroll" id="debts-list"></div>
+                </div>
+            </div>
+
+            <!-- Row 6: Recent Transactions Log -->
+            <div class="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Histori Transaksi</h3>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="clearHistory()" class="flex-1 sm:flex-none text-xs bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 px-4 py-2 rounded-lg font-bold hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors text-center">
+                            Reset Histori
+                        </button>
+                        <button onclick="exportToCSV()" class="flex-1 sm:flex-none text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-4 py-2 rounded-lg font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-center">
+                            Export CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-400 dark:text-slate-500 text-xs border-b border-slate-100 dark:border-slate-700">
+                                <th class="pb-3 font-semibold pl-2">Section</th>
+                                <th class="pb-3 font-semibold">Bulan</th>
+                                <th class="pb-3 font-semibold">Jenis</th>
+                                <th class="pb-3 font-semibold text-right pr-2">Nominal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tx-table-body">
+                            <!-- Di-generate otomatis oleh JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ================= MODALS ================= -->
+    
+    <!-- Modal Transaksi Utama -->
+    <div id="formModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-[2rem] shadow-2xl p-6 sm:p-8 transform scale-95 transition-transform duration-300" id="modalContent">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">Catat Transaksi</h3>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-500 transition-colors">✕</button>
+            </div>
+            
+            <form id="transactionForm" onsubmit="event.preventDefault(); submitFormToSpreadsheet(); return false;" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Rekening</label>
+                        <select id="form-section" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none font-bold text-slate-800 dark:text-white">
+                            <!-- Diisi oleh JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Bulan</label>
+                        <select id="form-month" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none font-bold text-slate-800 dark:text-white">
+                            <option value="Januari">Januari</option>
+                            <option value="Februari">Februari</option>
+                            <option value="Maret">Maret</option>
+                            <option value="April">April</option>
+                            <option value="Mei">Mei</option>
+                            <option value="Juni">Juni</option>
+                            <option value="Juli">Juli</option>
+                            <option value="Agustus">Agustus</option>
+                            <option value="September">September</option>
+                            <option value="Oktober">Oktober</option>
+                            <option value="November">November</option>
+                            <option value="Desember">Desember</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-teal-500 mb-1">Pemasukan (+)</label>
+                    <input type="number" id="form-income" value="0" min="0" class="w-full bg-teal-50/50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-900/50 rounded-xl px-4 py-2.5 outline-none font-bold text-slate-800 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-rose-500 mb-1">Pengeluaran (-)</label>
+                    <input type="number" id="form-expense" value="0" min="0" class="w-full bg-rose-50/50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/50 rounded-xl px-4 py-2.5 outline-none font-bold text-slate-800 dark:text-white">
+                </div>
+                <button type="submit" id="btn-submit-tx" class="w-full bg-slate-900 dark:bg-teal-500 text-white font-bold py-3 rounded-xl mt-2 transition-all hover:bg-slate-800 dark:hover:bg-teal-400">
+                    Simpan ke Spreadsheet
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Set Budget -->
+    <div id="budgetModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] shadow-2xl p-6 sm:p-8 transform scale-95 transition-transform duration-300" id="budgetModalContent">
+            <h3 class="text-xl font-extrabold text-slate-900 dark:text-white mb-4">Set Limit Budget</h3>
+            <form onsubmit="event.preventDefault(); saveBudget(); return false;">
+                <input type="number" id="input-new-budget" min="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4 font-bold text-slate-800 dark:text-white" required>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeBudgetModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Batal</button>
+                    <button type="submit" class="flex-1 bg-teal-500 text-white font-bold py-3 rounded-xl">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Set Goal -->
+    <div id="goalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] shadow-2xl p-6 sm:p-8 transform scale-95 transition-transform duration-300" id="goalModalContent">
+            <h3 class="text-xl font-extrabold text-slate-900 dark:text-white mb-4">Set Target Tabungan</h3>
+            <form onsubmit="event.preventDefault(); saveGoal(); return false;">
+                <input type="text" id="input-goal-name" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 font-bold text-slate-800 dark:text-white" placeholder="Nama Target" required>
+                <input type="number" id="input-goal-amount" min="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4 font-bold text-slate-800 dark:text-white" placeholder="Nominal Rp" required>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeGoalModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Batal</button>
+                    <button type="submit" class="flex-1 bg-indigo-500 text-white font-bold py-3 rounded-xl">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Add Tagihan (Subscription) -->
+    <div id="subModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] shadow-2xl p-6 sm:p-8 transform scale-95 transition-transform duration-300" id="subModalContent">
+            <h3 class="text-xl font-extrabold text-slate-900 dark:text-white mb-4">Tambah Tagihan</h3>
+            <form onsubmit="event.preventDefault(); saveSubscription(); return false;">
+                <input type="text" id="input-sub-name" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 font-bold text-slate-800 dark:text-white" placeholder="Nama Tagihan (ex: WiFi)" required>
+                <input type="number" id="input-sub-amount" min="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 font-bold text-slate-800 dark:text-white" placeholder="Nominal Rp" required>
+                <input type="number" id="input-sub-date" min="1" max="31" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4 font-bold text-slate-800 dark:text-white" placeholder="Tanggal Tagihan (1 - 31)" required>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeSubModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Batal</button>
+                    <button type="submit" class="flex-1 bg-teal-500 text-white font-bold py-3 rounded-xl">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Add Hutang/Piutang -->
+    <div id="debtModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] shadow-2xl p-6 sm:p-8 transform scale-95 transition-transform duration-300" id="debtModalContent">
+            <h3 class="text-xl font-extrabold text-slate-900 dark:text-white mb-4">Catat Hutang/Piutang</h3>
+            <form onsubmit="event.preventDefault(); saveDebt(); return false;">
+                <input type="text" id="input-debt-name" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 font-bold text-slate-800 dark:text-white" placeholder="Nama Orang/Keperluan" required>
+                
+                <select id="input-debt-type" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 font-bold text-slate-800 dark:text-white" required>
+                    <option value="piutang">Uangku Dipinjam (Piutang)</option>
+                    <option value="hutang">Aku Meminjam (Hutang)</option>
+                </select>
+                
+                <input type="number" id="input-debt-amount" min="1" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-4 font-bold text-slate-800 dark:text-white" placeholder="Nominal Rp" required>
+                
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeDebtModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-xl">Batal</button>
+                    <button type="submit" class="flex-1 bg-indigo-500 text-white font-bold py-3 rounded-xl">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        // ==========================================
+        // MASUKKAN URL GOOGLE APPS SCRIPT DI SINI
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnTjBsQNyU4bviaemT9TsTlWa5VjrthrPstY60VkKCwMwkF4LRCg471MV9XN_lkdU/exec'; 
+        // ==========================================
+        
+        // --- PENGATURAN TANGGAL & BULAN ---
+        const currentDate = new Date(); 
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').innerText = currentDate.toLocaleDateString('id-ID', dateOptions);
+        
+        const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        const realWorldMonthIndex = currentDate.getMonth(); 
+        document.getElementById('form-month').value = months[realWorldMonthIndex];
+        
+        // --- DATA LOKAL (Local Storage) ---
+        let GLOBAL_BUDGET_LIMIT = Number(localStorage.getItem('wisnu_budget')) || 2000000;
+        let GOAL_NAME = localStorage.getItem('wisnu_goal_name') || "Dana Darurat";
+        let GOAL_TARGET = Number(localStorage.getItem('wisnu_goal_target')) || 5000000;
+        
+        // Data ini dikosongkan secara default, akan terisi jika ada data di Local Storage
+        let subscriptions = JSON.parse(localStorage.getItem('wisnu_subs')) || [];
+        let debts = JSON.parse(localStorage.getItem('wisnu_debts')) || [];
+        let recentTransactions = JSON.parse(localStorage.getItem('wisnu_tx_log')) || [];
+
+        let currentSection = 'All'; 
+        let myChart = null; 
+        let myDonut = null; 
+        let activeChartType = 'line';
+        
+        // Data Default (Jika SCRIPT_URL kosong atau internet terputus)
+        let db = {
+            "BCA": { 
+                balance: 1117380, 
+                income: [1010390, 908004, 823000, 870171, 474120, 2765100, 921700, 1475035, 1959592, 0, 0, 0], 
+                expense: [337770, 587690, 1111106, 737000, 766596, 849715, 1908106, 2212757, 1578992, 0, 0, 0] 
+            },
+            "BRI": { 
+                balance: 41965, 
+                income: [360674, 460400, 0, 460400, 1960400, 1804400, 200000, 0, 0, 0, 0, 0], 
+                expense: [9000, 9000, 446000, 343604, 2145638, 507190, 1412000, 10000, 321877, 0, 0, 0] 
+            },
+            "BNI": { 
+                balance: 474441, 
+                income: [142483, 334000, 50000, 120000, 186000, 189050, 169900, 125000, 350000, 0, 0, 0], 
+                expense: [0, 5000, 28000, 452000, 33000, 54992, 350000, 249000, 20000, 0, 0, 0] 
+            },
+            "Dompet": { 
+                balance: 500000, 
+                income: [525000, 76000, 612000, 535000, 0, 370000, 211000, 570000, 100000, 0, 0, 0], 
+                expense: [15000, 10000, 288000, 1135000, 0, 20000, 541000, 490000, 0, 0, 0, 0] 
+            },
+            "ShopeePay": { 
+                balance: 52802, 
+                income: [0, 181308, 444500, 97834, 413165, 84860, 105100, 354094, 191285, 0, 0, 0], 
+                expense: [0, 159892, 336624, 155490, 349467, 159088, 89095, 269572, 300116, 0, 0, 0] 
+            },
+            "FlazzPutih": { 
+                balance: 89700, 
+                income: [0, 52100, 0, 22600, 50000, 0, 0, 0, 0, 0, 0, 0], 
+                expense: [0, 0, 0, 0, 35000, 0, 0, 0, 0, 0, 0, 0] 
+            },
+            "FlazzBiru": { 
+                balance: 95000, 
+                income: [0, 62200, 0, 0, 50000, 0, 50000, 0, 0, 0, 0, 0], 
+                expense: [0, 0, 0, 0, 67200, 0, 0, 0, 0, 0, 0, 0] 
+            }
+        };
+
+        // --- FUNGSI FORMAT MATA UANG ---
+        const formatRp = function(num) { 
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num); 
+        };
+        const formatShort = function(num) { 
+            return (num / 1000000).toFixed(1) + ' Jt'; 
+        };
+
+        // --- SISTEM LOGIN & FETCH API ---
+        async function handleLogin() {
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            
+            if (u.toLowerCase() === 'wisnu' && p === 'Vario12367') {
+                document.getElementById('login-error').classList.add('hidden');
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('loading-ui').classList.remove('hidden');
+                
+                // Coba ambil data dari API (Spreadsheet)
+                if (SCRIPT_URL && SCRIPT_URL.startsWith('http')) {
+                    try {
+                        const response = await fetch(SCRIPT_URL);
+                        const result = await response.json();
+                        if (result.status === "success") {
+                            db = result.data;
+                        }
+                    } catch(e) { 
+                        console.warn("Gagal fetch API. Menggunakan data lokal."); 
+                    }
+                }
+                
+                finishLogin();
+            } else { 
+                document.getElementById('login-error').classList.remove('hidden'); 
+            }
+        }
+
+        function finishLogin() {
+            initSidebar(); 
+            updateDashboard();
+            
+            const overlay = document.getElementById('login-screen');
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(function() { 
+                overlay.classList.add('hidden'); 
+            }, 500);
+        }
+
+        async function refreshDataFromSheet() {
+            if (!SCRIPT_URL || !SCRIPT_URL.startsWith('http')) {
+                alert("URL Apps Script belum diisi!");
+                return;
+            }
+            
+            alert("Menarik data terbaru dari Spreadsheet...");
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const result = await response.json();
+                if (result.status === "success") {
+                    db = result.data;
+                    initSidebar();
+                    updateDashboard();
+                    alert("Sinkronisasi Selesai!");
+                } else {
+                    alert("Gagal membaca Spreadsheet.");
+                }
+            } catch(e) { 
+                alert("Gagal menyinkronkan data."); 
+            }
+        }
+
+        // --- SUBMIT TRANSAKSI (POST) ---
+        async function submitFormToSpreadsheet() {
+            const section = document.getElementById('form-section').value; 
+            const month = document.getElementById('form-month').value; 
+            const mIndex = months.indexOf(month);
+            const inc = Number(document.getElementById('form-income').value) || 0; 
+            const exp = Number(document.getElementById('form-expense').value) || 0;
+
+            // 1. Update UI Langsung (Local)
+            if(db[section]) {
+                db[section].income[mIndex] += inc; 
+                db[section].expense[mIndex] += exp; 
+                db[section].balance += (inc - exp);
+            }
+            
+            if (inc > 0) {
+                recentTransactions.unshift({ section: section, month: month, type: 'Pemasukan', amount: inc });
+            }
+            if (exp > 0) {
+                recentTransactions.unshift({ section: section, month: month, type: 'Pengeluaran', amount: exp });
+            }
+            if (recentTransactions.length > 10) {
+                recentTransactions.pop();
+            }
+            
+            localStorage.setItem('wisnu_tx_log', JSON.stringify(recentTransactions));
+            
+            updateDashboard();
+            closeModal();
+            document.getElementById('transactionForm').reset();
+            document.getElementById('form-month').value = months[realWorldMonthIndex];
+
+            // 2. Kirim ke Spreadsheet di Background
+            if (SCRIPT_URL && SCRIPT_URL.startsWith('http')) {
+                const payload = { section: section, month: month, income: inc, expense: exp };
+                fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify(payload) 
+                }).catch(err => console.log("Gagal sync ke Spreadsheet", err));
+            } else {
+                alert("Berhasil simpan lokal (API Spreadsheet belum di-set).");
+            }
+        }
+
+        // --- SISTEM RESET HISTORI ---
+        function clearHistory() {
+            if (confirm("Yakin ingin menghapus seluruh histori transaksi lokal?\n\n(Catatan: Data asli di Spreadsheet tidak akan terhapus)")) {
+                recentTransactions = [];
+                localStorage.removeItem('wisnu_tx_log');
+                renderTransactions();
+            }
+        }
+
+        // --- TEMA GELAP (DARK MODE) ---
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            try { 
+                renderMainChart(getAggregatedData()); 
+                renderDonutChart(); 
+            } catch(e) {}
+        }
+
+        // --- INISIALISASI SIDEBAR ---
+        function initSidebar() {
+            const nav = document.getElementById('sidebar-nav');
+            const formSection = document.getElementById('form-section');
+            formSection.innerHTML = ''; 
+            
+            let html = `<button onclick="changeSection('All')" id="nav-All" class="nav-item w-full flex items-center justify-between px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 bg-slate-900 dark:bg-teal-600 text-white shadow-md">Dashboard Utama</button>`;
+            
+            for(let key in db) {
+                html += `<button onclick="changeSection('${key}')" id="nav-${key}" class="nav-item w-full flex items-center justify-between px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white">${key}</button>`;
+                
+                // Isi form option
+                formSection.innerHTML += `<option value="${key}">${key}</option>`;
+            }
+            nav.innerHTML = html;
+        }
+
+        function changeSection(sec) {
+            currentSection = sec;
+            const items = document.querySelectorAll('.nav-item');
+            
+            for(let i=0; i<items.length; i++) {
+                items[i].classList.remove('bg-slate-900', 'dark:bg-teal-600', 'text-white', 'shadow-md');
+                items[i].classList.add('text-slate-500', 'dark:text-slate-400');
+            }
+            
+            const activeEl = document.getElementById(`nav-${sec.replace(/\s+/g, '-')}`);
+            if(activeEl) {
+                activeEl.classList.add('bg-slate-900', 'dark:bg-teal-600', 'text-white', 'shadow-md');
+                activeEl.classList.remove('text-slate-500', 'dark:text-slate-400', 'hover:bg-slate-100', 'dark:hover:bg-slate-800');
+            }
+            
+            updateDashboard();
+        }
+
+        function getAggregatedData() {
+            if (currentSection !== 'All') return db[currentSection];
+            
+            let agg = { balance: 0, income: [0,0,0,0,0,0,0,0,0,0,0,0], expense: [0,0,0,0,0,0,0,0,0,0,0,0] };
+            for (let key in db) {
+                agg.balance += db[key].balance;
+                for (let i=0; i<12; i++) { 
+                    agg.income[i] += db[key].income[i]; 
+                    agg.expense[i] += db[key].expense[i]; 
+                }
+            }
+            return agg;
+        }
+
+        // --- UPDATE DASHBOARD UTAMA ---
+        function updateDashboard() {
+            const data = getAggregatedData();
+            document.getElementById('header-title').innerText = currentSection === 'All' ? 'Overview Keseluruhan' : `Section: ${currentSection}`;
+            
+            let totalInc = 0; 
+            let totalExp = 0;
+            for(let i=0; i<12; i++) { 
+                totalInc += data.income[i]; 
+                totalExp += data.expense[i]; 
+            }
+            
+            document.getElementById('card-balance').innerText = formatRp(data.balance);
+            document.getElementById('card-income').innerText = formatRp(totalInc);
+            document.getElementById('card-expense').innerText = formatRp(totalExp);
+            document.getElementById('card-net').innerText = formatRp(totalInc - totalExp);
+
+            generateInsightAndForecast(data);
+            
+            let totalGlobalBal = 0; 
+            let totalGlobalExpense = 0; 
+            let totalGlobalIncome = 0;
+            
+            for(let key in db) { 
+                totalGlobalBal += db[key].balance; 
+                totalGlobalExpense += db[key].expense[realWorldMonthIndex] || 0;
+                totalGlobalIncome += db[key].income[realWorldMonthIndex] || 0;
+            }
+            
+            updateGoalTracker(totalGlobalBal);
+            updateBudgetTracker(totalGlobalExpense);
+            updateHealthScore(totalGlobalIncome, totalGlobalExpense);
+            
+            renderMainChart(data);
+            renderDonutChart(); 
+            renderHeatmap();
+            renderSubscriptions();
+            renderDebts();
+            renderTransactions();
+        }
+
+        // --- KOMPONEN TRACKER ---
+        function updateBudgetTracker(totalExpense) {
+            document.getElementById('budget-limit-display').innerText = formatRp(GLOBAL_BUDGET_LIMIT);
+            const percentage = Math.min((totalExpense / GLOBAL_BUDGET_LIMIT) * 100, 100);
+            
+            const bar = document.getElementById('budget-bar');
+            bar.style.width = `${percentage}%`;
+            
+            document.getElementById('budget-percentage').innerText = `${percentage.toFixed(1)}%`;
+            
+            let colorClass = 'bg-teal-500';
+            if (percentage >= 70 && percentage < 90) colorClass = 'bg-amber-400';
+            else if (percentage >= 90) colorClass = 'bg-rose-500';
+            
+            bar.className = `h-3 rounded-full transition-all duration-1000 ease-out ${colorClass}`;
+            document.getElementById('budget-used').innerText = `Rp ${formatShort(totalExpense)}`;
+        }
+
+        function updateGoalTracker(globalBalance) {
+            document.getElementById('goal-name-display').innerText = GOAL_NAME;
+            document.getElementById('goal-target-display').innerText = formatRp(GOAL_TARGET);
+            
+            const percentage = Math.min((globalBalance / GOAL_TARGET) * 100, 100);
+            document.getElementById('goal-bar').style.width = `${percentage}%`;
+            document.getElementById('goal-percentage').innerText = `${percentage.toFixed(1)}%`;
+            document.getElementById('goal-current').innerText = `Rp ${formatShort(globalBalance)}`;
+        }
+
+        function updateHealthScore(mInc, mExp) {
+            let score = 50;
+            let savingRatio = mInc > 0 ? ((mInc - mExp) / mInc) * 100 : 0;
+            
+            if(savingRatio >= 20) {
+                score += 30; 
+            } else if(savingRatio > 0) {
+                score += savingRatio;
+            }
+            
+            let budgetUsage = (mExp / GLOBAL_BUDGET_LIMIT) * 100;
+            if(budgetUsage <= 80) {
+                score += 20; 
+            } else if(budgetUsage <= 100) {
+                score += 10; 
+            } else {
+                score -= 20;
+            }
+            
+            score = Math.min(Math.max(Math.round(score), 0), 100);
+            
+            const circle = document.getElementById('health-circle');
+            if(circle) {
+                const dashoffset = 226 - (226 * score) / 100;
+                circle.style.strokeDashoffset = dashoffset;
+                document.getElementById('health-score-val').innerText = score;
+                
+                let status = "Sangat Sehat"; 
+                let color = "text-white";
+                
+                if(score < 40) { 
+                    status = "Kritis"; 
+                    circle.style.stroke = "#f43f5e"; 
+                    color = "text-rose-100"; 
+                } else if(score < 70) { 
+                    status = "Perlu Perbaikan"; 
+                    circle.style.stroke = "#fcd34d"; 
+                    color = "text-amber-100"; 
+                } else { 
+                    circle.style.stroke = "white"; 
+                    color = "text-teal-50"; 
+                }
+                
+                document.getElementById('health-status').innerText = status;
+                document.getElementById('health-status').className = `mt-3 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-xs font-bold inline-block transition-colors ${color}`;
+            }
+        }
+
+        function generateInsightAndForecast(data) {
+            const mInc = data.income[realWorldMonthIndex] || 0; 
+            const mExp = data.expense[realWorldMonthIndex] || 0;
+            
+            let msg = "Terus pantau arus kasmu!";
+            if (mExp > mInc && mInc > 0) {
+                msg = `Defisit bulan ini! Kurangi pengeluaran sekunder.`;
+            } else if(mInc > 0) {
+                msg = `Bulan ini surplus ${(((mInc - mExp)/mInc)*100).toFixed(0)}%. Ideal untuk investasi.`;
+            } else if(mInc === 0 && mExp === 0) {
+                msg = `Belum ada pergerakan arus kas.`;
+            }
+            document.getElementById('ai-insight').innerText = msg;
+
+            let totalNet = 0; 
+            let act = realWorldMonthIndex + 1;
+            
+            for(let i=0; i<=realWorldMonthIndex; i++) {
+                totalNet += (data.income[i] - data.expense[i]);
+            }
+            
+            let avgNet = totalNet / act;
+            let rem = 11 - realWorldMonthIndex;
+            let proj = data.balance + (avgNet > 0 ? (avgNet * rem) : 0);
+            
+            document.getElementById('ai-forecast').innerText = formatRp(proj);
+        }
+
+        // --- SISTEM GRAFIK (CHART.JS) ---
+        function switchChartType(type) {
+            activeChartType = type;
+            document.getElementById('btn-chart-line').className = type === 'line' ? 'switch-active px-4 py-1.5 rounded-lg text-xs font-bold transition-all' : 'switch-inactive px-4 py-1.5 rounded-lg text-xs font-bold transition-all';
+            document.getElementById('btn-chart-bar').className = type === 'bar' ? 'switch-active px-4 py-1.5 rounded-lg text-xs font-bold transition-all' : 'switch-inactive px-4 py-1.5 rounded-lg text-xs font-bold transition-all';
+            updateDashboard();
+        }
+
+        function renderMainChart(data) {
+            if(typeof Chart === 'undefined') return; 
+            
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+            const fontColor = isDark ? '#94a3b8' : '#64748b';
+            
+            const gradInc = ctx.createLinearGradient(0, 0, 0, 300); 
+            gradInc.addColorStop(0, 'rgba(20, 184, 166, 0.3)'); 
+            gradInc.addColorStop(1, 'rgba(20, 184, 166, 0.0)');
+            
+            const gradExp = ctx.createLinearGradient(0, 0, 0, 300); 
+            gradExp.addColorStop(0, 'rgba(244, 63, 94, 0.3)'); 
+            gradExp.addColorStop(1, 'rgba(244, 63, 94, 0.0)');
+
+            let monthLabels = [];
+            for(let i=0; i<months.length; i++) {
+                monthLabels.push(months[i].substring(0,3));
+            }
+
+            myChart = new Chart(ctx, {
+                type: activeChartType,
+                data: {
+                    labels: monthLabels,
+                    datasets: [
+                        { 
+                            label: 'Masuk', 
+                            data: data.income, 
+                            backgroundColor: activeChartType === 'line' ? gradInc : '#2DD4BF', 
+                            borderColor: '#14b8a6', 
+                            borderWidth: 2, 
+                            pointBackgroundColor: isDark ? '#0f172a' : '#fff', 
+                            tension: 0.4, 
+                            fill: activeChartType === 'line', 
+                            borderRadius: 4 
+                        },
+                        { 
+                            label: 'Keluar', 
+                            data: data.expense, 
+                            backgroundColor: activeChartType === 'line' ? gradExp : '#FB7185', 
+                            borderColor: '#f43f5e', 
+                            borderWidth: 2, 
+                            pointBackgroundColor: isDark ? '#0f172a' : '#fff', 
+                            tension: 0.4, 
+                            fill: activeChartType === 'line', 
+                            borderRadius: 4 
+                        }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    interaction: { mode: 'index', intersect: false }, 
+                    plugins: { 
+                        legend: { 
+                            position: 'top', 
+                            align: 'end', 
+                            labels: { font: { family: 'Plus Jakarta Sans', weight: '700', size: 10 }, color: fontColor, boxWidth: 6 } 
+                        }, 
+                        tooltip: { 
+                            backgroundColor: '#0f172a', 
+                            padding: 10, 
+                            titleFont: { family: 'Plus Jakarta Sans' }, 
+                            cornerRadius: 8 
+                        } 
+                    }, 
+                    scales: { 
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { font: { family: 'Plus Jakarta Sans', weight: '600', size:10 }, color: fontColor } 
+                        }, 
+                        y: { 
+                            border: { display: false }, 
+                            grid: { color: gridColor }, 
+                            beginAtZero: true, 
+                            ticks: { 
+                                font: { family: 'Plus Jakarta Sans', weight: '600', size:10 }, 
+                                color: fontColor, 
+                                callback: function(v) { return formatShort(v); } 
+                            } 
+                        } 
+                    } 
+                }
+            });
+        }
+
+        function renderDonutChart() {
+            if(typeof Chart === 'undefined') return;
+            const ctx = document.getElementById('donutChart').getContext('2d');
+            const centerText = document.getElementById('donut-center-text');
+            if (myDonut) myDonut.destroy();
+
+            if (currentSection !== 'All') { 
+                document.getElementById('donutChart').style.display = 'none'; 
+                centerText.style.display = 'none'; 
+                return; 
+            }
+            
+            document.getElementById('donutChart').style.display = 'block'; 
+            centerText.style.display = 'flex';
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            let labels = []; 
+            let dataValues = []; 
+            let total = 0;
+            
+            for(let key in db) {
+                labels.push(key);
+                dataValues.push(db[key].balance);
+                total += db[key].balance;
+            }
+            
+            document.getElementById('donut-center-val').innerText = formatShort(total);
+            const colors = ['#14b8a6', '#3b82f6', '#6366f1', '#8b5cf6', '#f43f5e', '#f59e0b', '#64748b'];
+
+            myDonut = new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { 
+                    labels: labels, 
+                    datasets: [{ 
+                        data: dataValues, 
+                        backgroundColor: colors, 
+                        borderWidth: 4, 
+                        borderColor: isDark ? '#1e293b' : '#ffffff', 
+                        hoverOffset: 4 
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    cutout: '78%', 
+                    plugins: { 
+                        legend: { display: false }, 
+                        tooltip: { 
+                            backgroundColor: '#0f172a', 
+                            padding: 12, 
+                            callbacks: { 
+                                label: function(ctx) { return ' ' + formatRp(ctx.raw); } 
+                            } 
+                        } 
+                    } 
+                } 
+            });
+        }
+
+        // --- SUB-WIDGETS ---
+        function renderHeatmap() {
+            const grid = document.getElementById('heatmap-grid');
+            if(!grid) return;
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth(); 
+            
+            const monthLabel = document.getElementById('heatmap-month-label');
+            if(monthLabel) {
+                monthLabel.innerText = `${months[month]} ${year}`;
+            }
+
+            let firstDay = new Date(year, month, 1).getDay();
+            firstDay = firstDay === 0 ? 6 : firstDay - 1; 
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const currentDay = currentDate.getDate();
+
+            let html = '';
+            // Kotak Kosong Awal Bulan
+            for(let i=0; i<firstDay; i++) { 
+                html += `<div class="aspect-square rounded-md bg-transparent"></div>`; 
+            }
+            
+            // Kotak Tanggal
+            for(let day=1; day<=daysInMonth; day++) {
+                let heatClass = 'heat-0'; 
+                if(day <= currentDay) {
+                    let intensity = day % 4 === 0 ? 3 : (day % 3 === 0 ? 2 : (day % 5 === 0 ? 0 : 1));
+                    if(day === currentDay) intensity = 2; 
+                    heatClass = `heat-${intensity}`;
+                }
+                let ring = day === currentDay ? 'ring-1 ring-slate-900 dark:ring-white scale-110' : '';
+                html += `<div class="aspect-square rounded-sm sm:rounded-md transition-all ${heatClass} ${ring} hover:opacity-80" title="Tgl ${day}"></div>`;
+            }
+            grid.innerHTML = html;
+        }
+
+        function renderSubscriptions() {
+            const list = document.getElementById('bills-list');
+            if(!list) return;
+            
+            if (subscriptions.length === 0) {
+                list.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">Belum ada tagihan rutin.</p>`; 
+                return;
+            }
+
+            const today = currentDate.getDate(); 
+            let html = '';
+            
+            const sortedSubs = subscriptions.slice().sort(function(a,b) { 
+                return a.date - b.date; 
+            });
+            
+            for(let i=0; i<sortedSubs.length; i++) {
+                let sub = sortedSubs[i];
+                const isPast = sub.date < today;
+                const isNear = sub.date >= today && sub.date <= today + 3;
+                
+                let iconColor = isPast ? 'text-teal-500 bg-teal-50 dark:bg-teal-500/20' : (isNear ? 'text-amber-500 bg-amber-50 dark:bg-amber-500/20' : 'text-slate-400 bg-slate-50 dark:bg-slate-700');
+                
+                let icon = isPast ? `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>` : `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                
+                html += `
+                <div class="flex justify-between items-center group relative">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center ${iconColor}">${icon}</div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-teal-500 transition-colors">${sub.name}</p>
+                            <p class="text-[10px] font-semibold text-slate-400">Tgl ${sub.date}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <p class="text-xs font-bold text-slate-600 dark:text-slate-400">Rp ${formatShort(sub.amount)}</p>
+                        <button onclick="deleteSubscription(${sub.id})" class="text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 hidden group-hover:block transition-all" title="Hapus">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        function renderDebts() {
+            const list = document.getElementById('debts-list');
+            if(!list) return;
+            
+            if (debts.length === 0) { 
+                list.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-4">Semua hutang & piutang bersih! 🎉</p>`; 
+                return; 
+            }
+            
+            let html = '';
+            for(let i=0; i<debts.length; i++) {
+                let d = debts[i];
+                const isPiutang = d.type === 'piutang';
+                const color = isPiutang ? 'text-teal-500 bg-teal-50 dark:bg-teal-500/10' : 'text-rose-500 bg-rose-50 dark:bg-rose-500/10';
+                const sign = isPiutang ? 'Piutang' : 'Hutang';
+                
+                html += `
+                <div class="flex justify-between items-center p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    <div>
+                        <p class="text-xs font-bold text-slate-800 dark:text-slate-200">${d.name}</p>
+                        <p class="text-[10px] font-bold ${isPiutang ? 'text-teal-500' : 'text-rose-500'} uppercase mt-0.5">${sign} - Rp ${formatShort(d.amount)}</p>
+                    </div>
+                    <button onclick="payDebt(${d.id})" class="w-7 h-7 rounded-lg ${color} flex items-center justify-center hover:scale-110 transition-transform" title="Tandai Lunas">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </button>
+                </div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        function renderTransactions() {
+            const tbody = document.getElementById('tx-table-body');
+            if(!tbody) return;
+            
+            if (recentTransactions.length === 0) { 
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-xs italic">Belum ada transaksi di sesi ini.</td></tr>`; 
+                return; 
+            }
+            
+            let html = '';
+            for(let i=0; i<recentTransactions.length; i++) {
+                let tx = recentTransactions[i];
+                let typeColor = tx.type === 'Pemasukan' ? 'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400';
+                let amountColor = tx.type === 'Pemasukan' ? 'text-teal-600 dark:text-teal-400' : 'text-rose-600 dark:text-rose-400';
+                let sign = tx.type === 'Pemasukan' ? '+' : '-';
+                
+                html += `
+                <tr class="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td class="py-2.5 pl-2 font-semibold text-slate-800 dark:text-slate-200 text-xs">${tx.section}</td>
+                    <td class="py-2.5 text-xs text-slate-500 dark:text-slate-400">${tx.month.substring(0,3)}</td>
+                    <td class="py-2.5">
+                        <span class="px-1.5 py-0.5 rounded flex w-min text-[9px] font-bold ${typeColor}">${tx.type}</span>
+                    </td>
+                    <td class="py-2.5 text-right pr-2 text-xs font-bold ${amountColor}">${sign}${formatRp(tx.amount)}</td>
+                </tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
+        // --- MANAJEMEN CRUD WIDGET LOKAL ---
+        
+        // Subscription (Tagihan)
+        function openSubModal() {
+            document.getElementById('subModal').classList.remove('hidden');
+            setTimeout(function() { 
+                document.getElementById('subModal').classList.remove('opacity-0'); 
+                document.getElementById('subModalContent').classList.remove('scale-95'); 
+            }, 10);
+        }
+        
+        function closeSubModal() {
+            document.getElementById('subModal').classList.add('opacity-0'); 
+            document.getElementById('subModalContent').classList.add('scale-95'); 
+            setTimeout(function() { 
+                document.getElementById('subModal').classList.add('hidden'); 
+            }, 300);
+        }
+        
+        function saveSubscription() {
+            const name = document.getElementById('input-sub-name').value;
+            const amount = Number(document.getElementById('input-sub-amount').value);
+            const date = Number(document.getElementById('input-sub-date').value);
+            
+            let maxId = 0;
+            for(let i=0; i<subscriptions.length; i++) {
+                if(subscriptions[i].id > maxId) maxId = subscriptions[i].id;
+            }
+            const newId = maxId + 1;
+            
+            subscriptions.push({ id: newId, name: name, amount: amount, date: date });
+            localStorage.setItem('wisnu_subs', JSON.stringify(subscriptions)); 
+            
+            renderSubscriptions(); 
+            closeSubModal();
+            
+            document.getElementById('input-sub-name').value = ''; 
+            document.getElementById('input-sub-amount').value = ''; 
+            document.getElementById('input-sub-date').value = '';
+        }
+        
+        function deleteSubscription(id) {
+            for(let i=0; i<subscriptions.length; i++) {
+                if(subscriptions[i].id === id) {
+                    subscriptions.splice(i, 1);
+                    localStorage.setItem('wisnu_subs', JSON.stringify(subscriptions));
+                    renderSubscriptions(); 
+                    break;
+                }
+            }
+        }
+
+        // Debt (Hutang Piutang)
+        function openDebtModal() {
+            document.getElementById('debtModal').classList.remove('hidden');
+            setTimeout(function() { 
+                document.getElementById('debtModal').classList.remove('opacity-0'); 
+                document.getElementById('debtModalContent').classList.remove('scale-95'); 
+            }, 10);
+        }
+        
+        function closeDebtModal() {
+            document.getElementById('debtModal').classList.add('opacity-0'); 
+            document.getElementById('debtModalContent').classList.add('scale-95'); 
+            setTimeout(function() { 
+                document.getElementById('debtModal').classList.add('hidden'); 
+            }, 300);
+        }
+        
+        function saveDebt() {
+            const name = document.getElementById('input-debt-name').value;
+            const type = document.getElementById('input-debt-type').value;
+            const amount = Number(document.getElementById('input-debt-amount').value);
+            
+            let maxId = 0;
+            for(let i=0; i<debts.length; i++) {
+                if(debts[i].id > maxId) maxId = debts[i].id;
+            }
+            const newId = maxId + 1;
+            
+            debts.push({ id: newId, name: name, type: type, amount: amount });
+            localStorage.setItem('wisnu_debts', JSON.stringify(debts));
+            
+            renderDebts(); 
+            closeDebtModal();
+            
+            document.getElementById('input-debt-name').value = ''; 
+            document.getElementById('input-debt-amount').value = '';
+        }
+        
+        function payDebt(id) {
+            for(let i=0; i<debts.length; i++) {
+                if(debts[i].id === id) {
+                    let debtName = debts[i].name;
+                    debts.splice(i, 1);
+                    localStorage.setItem('wisnu_debts', JSON.stringify(debts)); 
+                    renderDebts(); 
+                    alert(`Catatan "${debtName}" berhasil ditandai Lunas!`);
+                    break;
+                }
+            }
+        }
+
+        // History Export
+        function exportToCSV() {
+            if(recentTransactions.length === 0) { 
+                alert("Belum ada histori transaksi untuk di-export."); 
+                return; 
+            }
+            let csvContent = "data:text/csv;charset=utf-8,Section,Bulan,Jenis,Nominal\n";
+            for(let i=0; i<recentTransactions.length; i++) {
+                let tx = recentTransactions[i];
+                csvContent += `${tx.section},${tx.month},${tx.type},${tx.amount}\n`;
+            }
+            const link = document.createElement("a"); 
+            link.setAttribute("href", encodeURI(csvContent)); 
+            link.setAttribute("download", "Histori_Keuangan.csv"); 
+            document.body.appendChild(link); 
+            link.click(); 
+            document.body.removeChild(link);
+        }
+
+        // --- MANAJEMEN MODAL PENGATURAN UMUM ---
+        function openModal() { 
+            document.getElementById('formModal').classList.remove('hidden'); 
+            if(currentSection !== 'All') {
+                document.getElementById('form-section').value = currentSection; 
+            }
+            setTimeout(function() { 
+                document.getElementById('formModal').classList.remove('opacity-0'); 
+                document.getElementById('modalContent').classList.remove('scale-95'); 
+            }, 10); 
+        }
+
+        function closeModal() { 
+            document.getElementById('formModal').classList.add('opacity-0'); 
+            document.getElementById('modalContent').classList.add('scale-95'); 
+            setTimeout(function() { 
+                document.getElementById('formModal').classList.add('hidden'); 
+            }, 300); 
+        }
+
+        function openBudgetModal() { 
+            document.getElementById('input-new-budget').value = GLOBAL_BUDGET_LIMIT; 
+            document.getElementById('budgetModal').classList.remove('hidden'); 
+            setTimeout(function() { 
+                document.getElementById('budgetModal').classList.remove('opacity-0'); 
+                document.getElementById('budgetModalContent').classList.remove('scale-95'); 
+            }, 10); 
+        }
+
+        function closeBudgetModal() { 
+            document.getElementById('budgetModal').classList.add('opacity-0'); 
+            document.getElementById('budgetModalContent').classList.add('scale-95'); 
+            setTimeout(function() { 
+                document.getElementById('budgetModal').classList.add('hidden'); 
+            }, 300); 
+        }
+
+        function saveBudget() { 
+            GLOBAL_BUDGET_LIMIT = Number(document.getElementById('input-new-budget').value) || 2000000; 
+            localStorage.setItem('wisnu_budget', GLOBAL_BUDGET_LIMIT);
+            updateDashboard(); 
+            closeBudgetModal(); 
+        }
+        
+        function openGoalModal() { 
+            document.getElementById('input-goal-name').value = GOAL_NAME; 
+            document.getElementById('input-goal-amount').value = GOAL_TARGET; 
+            document.getElementById('goalModal').classList.remove('hidden'); 
+            setTimeout(function() { 
+                document.getElementById('goalModal').classList.remove('opacity-0'); 
+                document.getElementById('goalModalContent').classList.remove('scale-95'); 
+            }, 10); 
+        }
+
+        function closeGoalModal() { 
+            document.getElementById('goalModal').classList.add('opacity-0'); 
+            document.getElementById('goalModalContent').classList.add('scale-95'); 
+            setTimeout(function() { 
+                document.getElementById('goalModal').classList.add('hidden'); 
+            }, 300); 
+        }
+
+        function saveGoal() { 
+            GOAL_NAME = document.getElementById('input-goal-name').value || "Mimpi"; 
+            GOAL_TARGET = Number(document.getElementById('input-goal-amount').value) || 1000000; 
+            localStorage.setItem('wisnu_goal_name', GOAL_NAME);
+            localStorage.setItem('wisnu_goal_target', GOAL_TARGET);
+            updateDashboard(); 
+            closeGoalModal(); 
+        }
+    </script>
+</body>
+</html>
