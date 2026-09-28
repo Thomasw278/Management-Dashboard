@@ -96,7 +96,7 @@
         }
     </style>
 </head>
-<body class="text-slate-800 dark:text-slate-200 antialiased h-screen flex overflow-hidden selection:bg-teal-200 selection:text-teal-900">
+<body class="text-slate-800 dark:text-slate-200 antialiased h-screen flex flex-col md:flex-row overflow-hidden selection:bg-teal-200 selection:text-teal-900">
 
     <!-- ================= LOGIN & LOADING SCREEN OVERLAY ================= -->
     <div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-50 dark:bg-slate-900 transition-all duration-500">
@@ -135,31 +135,34 @@
     </div>
     <!-- ======================================================== -->
 
-    <!-- Sidebar -->
-    <aside class="w-72 bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl flex flex-col hidden md:flex shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20 border-r border-slate-100 dark:border-slate-800 transition-colors">
-        <div class="p-8 pb-6 flex justify-between items-center">
+    <!-- Sidebar / Mobile Bottom Nav -->
+    <aside class="fixed bottom-0 left-0 right-0 md:relative w-full md:w-72 bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl flex flex-row md:flex-col shadow-[0_-4px_24px_rgba(0,0,0,0.02)] md:shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50 border-t md:border-t-0 md:border-r border-slate-100 dark:border-slate-800 transition-colors h-auto md:h-full">
+        <!-- Logo Header (Hanya di Desktop) -->
+        <div class="p-8 pb-6 justify-between items-center hidden md:flex">
             <div>
                 <h1 class="text-2xl font-extrabold tracking-tight dark:text-white">Wisnu<span class="gradient-text">Finance</span>.</h1>
                 <p class="text-slate-400 text-[11px] mt-1.5 font-bold tracking-widest uppercase">Personal Wealth</p>
             </div>
         </div>
         
-        <nav class="flex-1 px-4 space-y-1.5 overflow-y-auto hide-scroll" id="sidebar-nav">
+        <!-- Navigation Menu -->
+        <nav class="flex-1 px-4 py-3 md:py-0 space-x-2 md:space-x-0 md:space-y-1.5 flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto hide-scroll items-center md:items-stretch" id="sidebar-nav">
             <!-- Di-generate otomatis oleh JavaScript -->
         </nav>
         
-        <div class="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-            <button onclick="openModal()" class="w-full bg-slate-900 dark:bg-teal-500 hover:bg-slate-800 dark:hover:bg-teal-400 text-white font-bold py-3.5 rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-2">
+        <!-- Tombol Transaksi -->
+        <div class="p-3 md:p-6 border-l md:border-l-0 md:border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex-shrink-0 flex items-center justify-center">
+            <button onclick="openModal()" class="w-auto md:w-full bg-slate-900 dark:bg-teal-500 hover:bg-slate-800 dark:hover:bg-teal-400 text-white font-bold py-3 md:py-3.5 px-4 md:px-0 rounded-xl md:rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
                 </svg> 
-                Catat Transaksi
+                <span class="hidden md:inline">Catat Transaksi</span>
             </button>
         </div>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col h-full relative overflow-y-auto hide-scroll">
+    <main class="flex-1 flex flex-col h-full relative overflow-y-auto hide-scroll pb-24 md:pb-0">
         <!-- Header -->
         <header class="px-6 sm:px-8 py-8 flex justify-between items-end gap-6 flex-wrap">
             <div>
@@ -439,7 +442,7 @@
             </div>
             
             <form id="transactionForm" onsubmit="event.preventDefault(); submitFormToSpreadsheet(); return false;" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-1">Rekening</label>
                         <select id="form-section" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none font-bold text-slate-800 dark:text-white">
@@ -755,10 +758,11 @@
             const formSection = document.getElementById('form-section');
             formSection.innerHTML = ''; 
             
-            let html = `<button onclick="changeSection('All')" id="nav-All" class="nav-item w-full flex items-center justify-between px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 bg-slate-900 dark:bg-teal-600 text-white shadow-md">Dashboard Utama</button>`;
+            // Perbaikan untuk versi Mobile: Menambahkan flex-shrink-0 dan whitespace-nowrap
+            let html = `<button onclick="changeSection('All')" id="nav-All" class="nav-item flex-shrink-0 w-auto md:w-full flex items-center justify-between px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 bg-slate-900 dark:bg-teal-600 text-white shadow-md whitespace-nowrap">Dashboard Utama</button>`;
             
             for(let key in db) {
-                html += `<button onclick="changeSection('${key}')" id="nav-${key}" class="nav-item w-full flex items-center justify-between px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white">${key}</button>`;
+                html += `<button onclick="changeSection('${key}')" id="nav-${key}" class="nav-item flex-shrink-0 w-auto md:w-full flex items-center justify-between px-5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white whitespace-nowrap">${key}</button>`;
                 
                 // Isi form option
                 formSection.innerHTML += `<option value="${key}">${key}</option>`;
